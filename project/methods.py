@@ -67,10 +67,10 @@ class NonLocalBlock(nn.Module):
         self.out = nn.Conv2d(channels, channels, 1, 1, 0)
 
     def forward(self, x):
-        h_ = self.group_norm(x)
-        q = self.q(h_)
-        k = self.k(h_)
-        v = self.v(h_)
+        x_norm = self.group_norm(x)
+        q = self.q(x_norm)
+        k = self.k(x_norm)
+        v = self.v(x_norm)
 
         b, c, h, w = q.shape
 
@@ -84,7 +84,7 @@ class NonLocalBlock(nn.Module):
         attn = F.softmax(attn, dim=2)
         attn = attn.permute(0, 2, 1)
 
-        A = torch.bmm(v, attn)
-        A = A.reshape(b, c, h, w)
+        val = torch.bmm(v, attn)
+        val = val.reshape(b, c, h, w)
 
-        return x + A
+        return x + val

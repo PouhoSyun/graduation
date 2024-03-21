@@ -4,7 +4,7 @@ class Discriminator(nn.Module):
     def __init__(self, args, mid_channels=64, layer_cnt=3):
         super(Discriminator, self).__init__()
 
-        layers = [nn.Conv2d(args.imagemult_para, mid_channels, 4, 2, 1),
+        layers = [nn.Conv2d(args.image_channels, mid_channels, 4, 2, 1),
                   nn.LeakyReLU(0.2)]
         mult_para = 1
 
