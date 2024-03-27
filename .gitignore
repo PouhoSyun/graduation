@@ -1,0 +1,13 @@
+/results
+
+/checkpoints
+
+/vgg_lpips
+
+/test/dataset
+
+/project/__pycache__
+
+/project/model/__pycache__
+
+/project/transformer/__pycache__
