@@ -7,6 +7,39 @@ import torch.nn as nn
 import torch.utils.data as data
 import matplotlib.pyplot as plt
 
+def hvstack16(tensor: torch.Tensor):
+    size = int(tensor.shape[1])
+    lines = []
+    for line in tensor.reshape(4, 4, size, size):
+        lines.append(np.hstack(line))
+    view = np.vstack(lines).astype(np.uint8)
+    return view
+
+def hvsplit16(array: np.ndarray):
+    lines = np.vsplit(array, 4)
+    view = []
+    stack = []
+    for line in lines:
+        line = np.hsplit(line, 4)
+        stack.extend(line)
+    return [cell.tolist() for cell in stack]
+
+# fine stack -- Tensor[16, size, size] -> array[4*size, 4*size]
+def fine_stack16(tensor: torch.Tensor):
+    size = int(tensor.shape[1])
+    array = []
+    for i in range(16):
+        array.append(tensor[:,])
+
+# fine split -- array[4*size, 4*size] -> Tensor[16, size, size]
+def fine_split16(array: np.ndarray):
+    size = int(array.shape[1] / 4)
+    array.ravel()
+    tensor = []
+    for i in range(16):
+        tensor.append(array[i:16:].reshape(size, size))
+    return torch.Tensor(tensor)
+
 # size of event camera is 190*180
 # transform matfile to streamfile, then use spatial-temporal voxel grid method to record events.
 def pack_event_stream(dataset, file_cnt, time):
@@ -24,17 +57,12 @@ def pack_event_stream(dataset, file_cnt, time):
         # DAVIS infrared senser use linear threshold
         event_field = np.zeros((200, 200))
         for event in events:
-            event_field[int(event[1])][int(event[0])] += 1 / (1 + math.exp(time - event[2])) #consider pre/past event affect
+            event_field[int(event[1])][int(event[0])] += event[2] / (1 + math.exp(time - event[3])) #consider pre/past event affect
         for it in np.nditer(event_field):
             it = 255 / (1 + math.exp(-it))
 
         # split the output into 16 50*50 pieces
-        lines = np.vsplit(event_field, 4)
-        events = []
-        for line in lines:
-            line = np.hsplit(line, 4)
-            events.extend(line)
-        event_countmap.append([cell.tolist() for cell in events])
+        event_countmap.append(hvsplit16(event_field))
 
     return ev_stream, torch.tensor(event_countmap)
 
@@ -86,14 +114,6 @@ def concat_tensors(dataset, time, cmap):
         
     data = list(zip(frame[0:-1], events, frame[1:]))
     return data
-
-def hvstack16(tensor: torch.Tensor):
-    size = int(tensor.shape[1])
-    lines = []
-    for line in tensor.reshape(4, 4, size, size):
-        lines.append(np.hstack(line))
-    view = np.vstack(lines).astype(np.uint8)
-    return view
 
 class Frame_Dataset(data.Dataset):
     def __init__(self, dataset, cmap):
