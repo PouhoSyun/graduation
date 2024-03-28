@@ -1,6 +1,7 @@
 import torch.nn as nn
 import methods 
 
+# compress frame to short vector mapped by codebook
 class Encoder(nn.Module):
     def __init__(self, args):
         super(Encoder, self).__init__()

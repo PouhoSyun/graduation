@@ -1,5 +1,6 @@
 import torch.nn as nn
 
+# distinguish real image and fake image and make the difference of confidence as huge as possible
 class Discriminator(nn.Module):
     def __init__(self, args, mid_channels=64, layer_cnt=3):
         super(Discriminator, self).__init__()

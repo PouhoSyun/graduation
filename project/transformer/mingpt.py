@@ -13,7 +13,6 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-
 class GPTConfig:
     """ base GPT config, params common to all GPT versions """
     embd_pdrop = 0.1

@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from transformer.mingpt import GPT
 from model.vqgan import VQGAN
 
-
 class VQGANTransformer(nn.Module):
     def __init__(self, args):
         super(VQGANTransformer, self).__init__()

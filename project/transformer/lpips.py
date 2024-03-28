@@ -12,7 +12,7 @@ CKPT_MAP = {
     "vgg_lpips": "vgg.pth"
 }
 
-# download data from url, chunnked by chunk_size, with process bar indicated
+# download data from 'url', chunnked by chunk_size, with process bar indicated
 def download(url, local_path, chunk_size=1024):
     os.makedirs(os.path.split(local_path)[0], exist_ok=True)
     with requests.get(url, stream=True) as r:

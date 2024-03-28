@@ -4,6 +4,7 @@ from model.encoder import Encoder
 from model.decoder import Decoder
 from model.codebook import Codebook
 
+# all modules piling up
 class VQGAN(nn.Module):
     def __init__(self, args):
         super(VQGAN, self).__init__()

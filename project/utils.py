@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.utils.data as data
 import matplotlib.pyplot as plt
+import albumentations as alb
 
 def hvstack16(tensor: torch.Tensor):
     size = int(tensor.shape[1])
@@ -34,10 +35,9 @@ def fine_stack16(tensor: torch.Tensor):
 # fine split -- array[4*size, 4*size] -> Tensor[16, size, size]
 def fine_split16(array: np.ndarray):
     size = int(array.shape[1] / 4)
-    array.ravel()
     tensor = []
     for i in range(16):
-        tensor.append(array[i:16:].reshape(size, size))
+        tensor.append(array[(i//4)::4, (i%4)::4].reshape(size, size))
     return torch.Tensor(tensor)
 
 # size of event camera is 190*180
@@ -67,8 +67,8 @@ def pack_event_stream(dataset, file_cnt, time):
     return ev_stream, torch.tensor(event_countmap)
 
 # size of frame camera is 1520 * 1440, then split to 16 400*400 cell-pics.
-def load_frame_png(file_id, color, dataset):
-    frame = cv2.cvtColor(cv2.imread("test/dataset/" + dataset + "/RGB_frame/frame" + str(file_id) + ".png"), color)
+def load_frame_png(file_id, cmap, dataset):
+    frame = cv2.cvtColor(cv2.imread("test/dataset/" + dataset + "/RGB_frame/frame" + str(file_id) + ".png"), cmap)
     h_pad = int((1600 - frame.shape[1]) / 2)
     v_pad = int((1600 - frame.shape[0]) / 2)
     frame = torch.tensor(cv2.copyMakeBorder(frame, v_pad, v_pad, h_pad, h_pad, cv2.BORDER_CONSTANT, value=(128, 128, 128)))
@@ -115,22 +115,28 @@ def concat_tensors(dataset, time, cmap):
     data = list(zip(frame[0:-1], events, frame[1:]))
     return data
 
+# get frame dataset: cmap--cv2.IMREAD_*, size--square edge length of the image
 class Frame_Dataset(data.Dataset):
-    def __init__(self, dataset, cmap):
-        iter_size = len(os.listdir("test/dataset/" + dataset + "/RGB_frame"))
-        try:
-            frame = np.load("test/dataset/" + dataset + "/concat_frame.npy")
-        except:
-            frame = pack_frame_png(dataset, iter_size, cmap).tolist()
-            np.save("test/dataset/" + dataset + "/concat_frame.npy", frame)
-        self.data = frame
+    def __init__(self, dataset, cmap, size):
+        path = "test/dataset/" + dataset + "/RGB_frame"
+
+        self.images = [os.path.join(path, file) for file in os.listdir(path)]
+        self._length = len(self.images)
+        self.cmap = cmap
+        
+        self.rescaler = alb.SmallestMaxSize(max_size=size)
+        self.cropper = alb.CenterCrop(height=size, width=size)
+        self.preprocessor = alb.Compose([self.rescaler, self.cropper])
         pass
 
     def __len__(self):
-        return len(self.data)
+        return self._length
     
     def __getitem__(self, index):
-        item = self.data[index]
+        item = np.array(cv2.imread(self.images[index], self.cmap)).astype(np.uint8)
+        item = self.preprocessor(image=item)["image"]
+        # item = (item / 127.5 - 1.0).astype(np.float32)
+        # item = item.transpose(2, 0, 1)
         return torch.Tensor(item)
 
 #dataset class for dataloader
@@ -187,6 +193,6 @@ def plot_images(images):
 
 # preview DAVIS dataset
 if __name__ == '__main__':
-    dataset = DAVIS_Dataset("Indoor4", 0.02, cv2.COLOR_BGR2GRAY)
+    dataset = DAVIS_Dataset("Indoor4", 0.02, cv2.IMREAD_GRAYSCALE)
     while(True):
         dataset.__show__(int(input("Index to preview: ")))

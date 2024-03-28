@@ -1,6 +1,7 @@
 import torch.nn as nn
 import methods
 
+# release frames from vectors
 class Decoder(nn.Module):
     def __init__(self, args):
         super(Decoder, self).__init__()

@@ -14,7 +14,7 @@ class Swish(nn.Module):
     def forward(self, x):
         return x * torch.sigmoid(x)
 
-# residual block for resnet structure, learn to make loss self.block(x) -> 0
+# residual block for resnet structure, learn to make loss function self.block(x) -> 0
 class ResidualBock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(ResidualBock, self).__init__()

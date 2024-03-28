@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+# a dictionary of vectors for mapping
 class Codebook(nn.Module):
     def __init__(self, args):
         super(Codebook, self).__init__()

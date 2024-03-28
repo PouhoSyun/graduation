@@ -5,7 +5,6 @@ from torchvision import utils as vutils
 from transformer import VQGANTransformer
 from tqdm import tqdm
 
-
 parser = argparse.ArgumentParser(description="VQGAN")
 parser.add_argument('--latent-dim', type=int, default=256, help='Latent dimension n_z.')
 parser.add_argument('--image-size', type=int, default=256, help='Image height and width.)')

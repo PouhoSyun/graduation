@@ -9,7 +9,6 @@ from torchvision import utils as vutils
 from transformer.transformer import VQGANTransformer
 from utils import load_data, plot_images
 
-
 class TrainTransformer:
     def __init__(self, args):
         self.model = VQGANTransformer(args).to(device=args.device)

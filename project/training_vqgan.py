@@ -15,7 +15,6 @@ from transformer.lpips import LPIPS
 from model.vqgan import VQGAN
 from utils import load_data, weights_init
 
-
 class TrainVQGAN:
     def __init__(self, args):
         self.vqgan = VQGAN(args).to(device=args.device)
