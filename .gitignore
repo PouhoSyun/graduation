@@ -13,3 +13,5 @@
 /project/transformer/__pycache__
 
 /.tmp.driveupload
+
+/dataset_prep
