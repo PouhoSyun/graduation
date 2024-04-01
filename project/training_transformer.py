@@ -74,7 +74,7 @@ if __name__ == '__main__':
     parser.add_argument('--image-channels', type=int, default=16, help='Number of channels of images.')
     parser.add_argument('--dataset-path', type=str, default='./data', help='Path to data.')
     parser.add_argument('--checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt', help='Path to checkpoint.')
-    parser.add_argument('--device', type=str, default="cpu", help='Which device the training is on')
+    parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
     parser.add_argument('--batch-size', type=int, default=10, help='Input batch size for training.')
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
     parser.add_argument('--learning-rate', type=float, default=2.25e-05, help='Learning rate.')
@@ -91,6 +91,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.dataset = "Indoor4"
     args.checkpoint_path = r"./checkpoints/vqgan_epoch_7.pt"
+
+    if torch.cuda.is_available():
+        args.device = torch.device("cuda")
+        print("PyTorch is using GPU")
+    else:
+        args.device = torch.device("cpu")
+        print("PyTorch is using CPU")
 
     train_transformer = TrainTransformer(args)
 

@@ -14,7 +14,7 @@ parser.add_argument('--image-channels', type=int, default=3, help='Number of cha
 parser.add_argument('--dataset-path', type=str, default='./data', help='Path to data.')
 parser.add_argument('--checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt',
                     help='Path to checkpoint.')
-parser.add_argument('--device', type=str, default="cpu", help='Which device the training is on')
+parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
 parser.add_argument('--batch-size', type=int, default=20, help='Input batch size for training.')
 parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
 parser.add_argument('--learning-rate', type=float, default=2.25e-05, help='Learning rate.')
@@ -33,6 +33,11 @@ parser.add_argument('--sos-token', type=int, default=0, help='Start of Sentence 
 args = parser.parse_args()
 args.dataset_path = "Indoor4"
 args.checkpoint_path = r".\checkpoints\vqgan_last_ckpt.pt"
+
+if torch.cuda.is_available():
+    args.device = torch.device("cuda")
+else:
+    args.device = torch.device("cpu")
 
 n = 100
 transformer = VQGANTransformer(args).to(args.device)

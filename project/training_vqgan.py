@@ -13,7 +13,7 @@ from torchvision import utils as vutils
 from model.discriminator import Discriminator
 from transformer.lpips import LPIPS
 from model.vqgan import VQGAN
-from utils import load_data, weights_init
+from utils import load_frameset, weights_init
 
 class TrainVQGAN:
     def __init__(self, args):
@@ -48,7 +48,7 @@ class TrainVQGAN:
         os.makedirs("checkpoints", exist_ok=True)
 
     def train(self, args):
-        train_dataset = load_data(args, 0)
+        train_dataset = load_frameset(args)
         steps_per_epoch = len(train_dataset)
         for epoch in range(args.epochs):
             with tqdm(range(len(train_dataset))) as pbar:
@@ -86,9 +86,8 @@ class TrainVQGAN:
                     if i % 10 == 0:
                         with torch.no_grad():
                             real_fake_images = torch.cat((imgs[:4], decoded_images.add(1).mul(0.5)[:4])).permute(1, 0, 2, 3)
-                            for no, piece in enumerate(real_fake_images):
-                                piece = torch.Tensor(cv2.cvtColor(np.array([piece]), cv2.COLOR_GRAY2BGR))
-                                vutils.save_image(piece, os.path.join("results", f"{epoch}_{i}_piece{no}.jpg"), nrow=4)
+                            real_fake_images = torch.Tensor(cv2.cvtColor(np.array(real_fake_images), cv2.COLOR_GRAY2BGR))
+                            vutils.save_image(real_fake_images, os.path.join("results", f"{epoch}_{i}.jpg"), nrow=4)
 
                     pbar.set_postfix(
                         VQ_Loss=np.round(vq_loss.cpu().detach().numpy().item(), 5),
@@ -101,25 +100,35 @@ class TrainVQGAN:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="VQGAN")
     parser.add_argument('--latent-dim', type=int, default=256, help='Latent dimension n_z (default: 256)')
-    parser.add_argument('--image-size', type=int, default=256, help='Image height and width (default: 256)')
-    parser.add_argument('--codebook-size', type=int, default=1024, help='Number of codebook vectors (default: 256)')
+    parser.add_argument('--image-size', type=int, default=400, help='Image height and width (default: 256)')
+    parser.add_argument('--codebook-size', type=int, default=1024, help='Number of codebook vectors (default: 1024)')
     parser.add_argument('--beta', type=float, default=0.25, help='Commitment loss scalar (default: 0.25)')
-    parser.add_argument('--image-channels', type=int, default=16, help='Number of channels of images (default: 16)')
+    parser.add_argument('--image-channels', type=int, default=1, help='Number of channels of images (default: 16)')
     parser.add_argument('--dataset-path', type=str, default='/data', help='Path to data (default: /data)')
-    parser.add_argument('--device', type=str, default="cpu", help='Which device the training is on')
-    parser.add_argument('--batch-size', type=int, default=10, help='Input batch size for training (default: 6)')
-    parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train (default: 50)')
-    parser.add_argument('--learning-rate', type=float, default=2.25e-05, help='Learning rate (default: 0.0002)')
-    parser.add_argument('--beta1', type=float, default=0.5, help='Adam beta param (default: 0.0)')
+    parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
+    parser.add_argument('--batch-size', type=int, default=16, help='Input batch size for training (default: 6)')
+    parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train (default: 100)')
+    parser.add_argument('--learning-rate', type=float, default=2.25e-05, help='Learning rate (default: 2.25e-05)')
+    parser.add_argument('--beta1', type=float, default=0.5, help='Adam beta param (default: 0.5)')
     parser.add_argument('--beta2', type=float, default=0.9, help='Adam beta param (default: 0.999)')
-    parser.add_argument('--disc-start', type=int, default=10000, help='When to start the discriminator (default: 0)')
+    parser.add_argument('--disc-start', type=int, default=10000, help='When to start the discriminator (default: 10000)')
     parser.add_argument('--disc-factor', type=float, default=1., help='')
     parser.add_argument('--rec-loss-factor', type=float, default=1., help='Weighting factor for reconstruction loss.')
     parser.add_argument('--perceptual-loss-factor', type=float, default=1., help='Weighting factor for perceptual loss.')
 
     args = parser.parse_args()
     args.dataset = "Indoor4"
-
+    
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:200"
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+    if torch.cuda.is_available():
+        args.device = torch.device("cuda")
+        print("PyTorch is using GPU")
+    else:
+        args.device = torch.device("cpu")
+        print("PyTorch is using CPU")
+    
     train_vqgan = TrainVQGAN(args)
 
 

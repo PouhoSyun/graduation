@@ -52,7 +52,11 @@ class LPIPS(nn.Module):
         
     def load_from_pretrained(self, name="vgg_lpips"):
         ckpt = get_ckpt_path(name, "vgg_lpips")
-        self.load_state_dict(torch.load(ckpt, map_location=torch.device("cpu")), strict=False)
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
+        self.load_state_dict(torch.load(ckpt, map_location=device), strict=False)
 
     def forward(self, real_x, fake_x):
         features_real = self.vgg(self.scaling_layer(real_x))
@@ -91,7 +95,7 @@ class VGG16(nn.Module):
     def __init__(self):
         super(VGG16, self).__init__()
         vgg_pretrained_features = vgg16(pretrained=True).features
-        self.filter = nn.Conv2d(16, 3, 1, 1, 0, bias=False)
+        self.filter = nn.Conv2d(1, 3, 1, 1, 0, bias=False)
         slices = [vgg_pretrained_features[i] for i in range(30)]
         self.slice1 = nn.Sequential(*slices[0:4])
         self.slice2 = nn.Sequential(*slices[4:9])

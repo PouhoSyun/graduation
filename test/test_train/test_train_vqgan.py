@@ -114,4 +114,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.dataset_path = r"C:\Users\dome\datasets\flowers"
 
+    if torch.cuda.is_available():
+        args.device = torch.device("cuda")
+        print("PyTorch is using GPU")
+    else:
+        args.device = torch.device("cpu")
+        print("PyTorch is using CPU")
+
     train_vqgan = TrainVQGAN(args)
