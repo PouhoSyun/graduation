@@ -85,8 +85,8 @@ class TrainVQGAN:
 
                     if i % 10 == 0:
                         with torch.no_grad():
-                            real_fake_images = torch.cat((imgs[:4], decoded_images.add(1).mul(0.5)[:4])).permute(1, 0, 2, 3)
-                            real_fake_images = torch.Tensor(cv2.cvtColor(np.array(real_fake_images), cv2.COLOR_GRAY2BGR))
+                            real_fake_images = torch.cat((imgs[:4], decoded_images.add(1).mul(0.5)[:4]))
+                            # real_fake_images = torch.Tensor(cv2.cvtColor(np.array(real_fake_images), cv2.COLOR_GRAY2BGR))
                             vutils.save_image(real_fake_images, os.path.join("results", f"{epoch}_{i}.jpg"), nrow=4)
 
                     pbar.set_postfix(

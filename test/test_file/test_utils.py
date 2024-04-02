@@ -33,6 +33,16 @@ def test_event_voxel(pic_no):
     cv2.imshow("win", show)
     cv2.waitKey(0)
 
+def test_dataloader():
+    _ = cv2.namedWindow("win", cv2.WINDOW_AUTOSIZE)
+    dataset = Frame_Dataset("Indoor4", cv2.IMREAD_GRAYSCALE, 400)
+    train_loader = data.DataLoader(dataset, batch_size=16, shuffle=False)
+    for imgs in train_loader:
+        imgs = hvstack(np.array(127.5*(imgs+1)).astype(np.uint8)).transpose(1, 2, 0)
+        cv2.imshow("win", imgs)
+        cv2.waitKey(0)    
+
 if __name__ == "__main__":
     # test_fine_split(1)
-    test_event_voxel(1)
+    # test_event_voxel(1)
+    test_dataloader()

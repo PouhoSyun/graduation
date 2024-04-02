@@ -15,7 +15,7 @@ def hvstack(src: np.ndarray, dim4=True):
         for i in src: i = np.array([i])
     dst = []
     for c in src.transpose(1, 0, 2, 3):
-        size = int(src.shape[1])
+        size = int(src.shape[2])
         pieces = int(src.shape[0] ** 0.5)
         lines = []
         for line in src.reshape(pieces, pieces, size, size):
@@ -145,8 +145,7 @@ class Frame_Dataset(data.Dataset):
     def __getitem__(self, index):
         item = self.images[index//16]
         item = self.preprocessor(image=item[index%16].transpose(1, 2, 0))["image"]
-        # item=item[index%16]
-        # item = (item / 127.5 - 1.0).astype(np.float32)
+        item = (item / 127.5 - 1.0).astype(np.float32)
         return torch.Tensor(item.transpose(2, 0, 1))
 
 #dataset class for dataloader
@@ -173,7 +172,7 @@ class DAVIS_Dataset(data.Dataset):
 
 # data_type 0-src_frame, 1-event_voxel, 2-dst_frame
 def load_frameset(args):
-    dataset = Frame_Dataset("Indoor4", cv2.IMREAD_GRAYSCALE, 400)
+    dataset = Frame_Dataset(args.dataset, cv2.IMREAD_GRAYSCALE, args.image_size)
     train_loader = data.DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
     return train_loader
 
