@@ -144,9 +144,10 @@ class Frame_Dataset(data.Dataset):
     
     def __getitem__(self, index):
         item = self.images[index//16]
-        item = self.preprocessor(image=item[index%16])["image"]
+        item = self.preprocessor(image=item[index%16].transpose(1, 2, 0))["image"]
+        # item=item[index%16]
         # item = (item / 127.5 - 1.0).astype(np.float32)
-        return torch.Tensor(item)
+        return torch.Tensor(item.transpose(2, 0, 1))
 
 #dataset class for dataloader
 class DAVIS_Dataset(data.Dataset):

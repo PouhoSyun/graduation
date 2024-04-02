@@ -71,7 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('--image-size', type=int, default=256, help='Image height and width.)')
     parser.add_argument('--codebook-size', type=int, default=1024, help='Number of codebook vectors.')
     parser.add_argument('--beta', type=float, default=0.25, help='Commitment loss scalar.')
-    parser.add_argument('--image-channels', type=int, default=16, help='Number of channels of images.')
+    parser.add_argument('--image-channels', type=int, default=6, help='Number of channels of images.')
     parser.add_argument('--dataset-path', type=str, default='./data', help='Path to data.')
     parser.add_argument('--checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt', help='Path to checkpoint.')
     parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
