@@ -42,7 +42,18 @@ def test_dataloader():
         cv2.imshow("win", imgs)
         cv2.waitKey(0)    
 
+def test_davis_dataset():
+    _ = cv2.namedWindow("win", cv2.WINDOW_FREERATIO)
+    dataset = DAVIS_Dataset("Indoor4", cv2.IMREAD_GRAYSCALE, 400, 0.02)
+    train_loader = data.DataLoader(dataset, batch_size=8, shuffle=False)
+    for imgs in train_loader:
+        imgs = np.reshape(np.array(imgs), (16, 1, 400, 400))
+        imgs = hvstack(np.array(127.5*(imgs+1)).astype(np.uint8)).transpose(1, 2, 0)
+        cv2.imshow("win", imgs)
+        cv2.waitKey(0)
+
 if __name__ == "__main__":
     # test_fine_split(1)
     # test_event_voxel(1)
-    test_dataloader()
+    # test_dataloader()
+    test_davis_dataset()

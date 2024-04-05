@@ -85,8 +85,7 @@ class TrainVQGAN:
 
                     if i % 10 == 0:
                         with torch.no_grad():
-                            real_fake_images = torch.cat((imgs[:4], decoded_images.add(1).mul(0.5)[:4]))
-                            # real_fake_images = torch.Tensor(cv2.cvtColor(np.array(real_fake_images), cv2.COLOR_GRAY2BGR))
+                            real_fake_images = torch.cat((imgs[:4].add(1).mul(0.5), decoded_images.add(1).mul(0.5)[:4]))
                             vutils.save_image(real_fake_images, os.path.join("results", f"{epoch}_{i}.jpg"), nrow=4)
 
                     pbar.set_postfix(
@@ -106,7 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('--image-channels', type=int, default=1, help='Number of channels of images (default: 1)')
     parser.add_argument('--dataset-path', type=str, default='/data', help='Path to data (default: /data)')
     parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
-    parser.add_argument('--batch-size', type=int, default=6, help='Input batch size for training (default: 6)')
+    parser.add_argument('--batch-size', type=int, default=10, help='Input batch size for training (default: 6)')
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train (default: 100)')
     parser.add_argument('--learning-rate', type=float, default=2.25e-05, help='Learning rate (default: 2.25e-05)')
     parser.add_argument('--beta1', type=float, default=0.5, help='Adam beta param (default: 0.5)')

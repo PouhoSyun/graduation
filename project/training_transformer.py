@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import utils as vutils
 from transformer.transformer import VQGANTransformer
-from utils import load_data, plot_images
+from utils import load_davisset, plot_images
 
 class TrainTransformer:
     def __init__(self, args):
@@ -47,7 +47,7 @@ class TrainTransformer:
         return optimizer
 
     def train(self, args):
-        train_dataset = load_data(args, 1)
+        train_dataset = load_davisset(args)
         for epoch in range(args.epochs):
             with tqdm(range(len(train_dataset))) as pbar:
                 for i, imgs in zip(pbar, train_dataset):
@@ -60,7 +60,7 @@ class TrainTransformer:
                     pbar.set_postfix(Transformer_Loss=np.round(loss.cpu().detach().numpy().item(), 4))
                     pbar.update(0)
             log, sampled_imgs = self.model.log_images(imgs[0][None])
-            vutils.save_image(sampled_imgs, os.path.join("results", f"transformer_{epoch}.jpg"), nrow=4)
+            vutils.save_image(sampled_imgs.add(1).mul(0.5), os.path.join("results", f"transformer_{epoch}.jpg"), nrow=4)
             plot_images(log)
             torch.save(self.model.state_dict(), os.path.join("checkpoints", f"transformer_{epoch}.pt"))
 
@@ -68,10 +68,10 @@ class TrainTransformer:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="VQGAN")
     parser.add_argument('--latent-dim', type=int, default=256, help='Latent dimension n_z.')
-    parser.add_argument('--image-size', type=int, default=256, help='Image height and width.)')
+    parser.add_argument('--image-size', type=int, default=400, help='Image height and width.)')
     parser.add_argument('--codebook-size', type=int, default=1024, help='Number of codebook vectors.')
     parser.add_argument('--beta', type=float, default=0.25, help='Commitment loss scalar.')
-    parser.add_argument('--image-channels', type=int, default=6, help='Number of channels of images.')
+    parser.add_argument('--image-channels', type=int, default=1, help='Number of channels of images.')
     parser.add_argument('--dataset-path', type=str, default='./data', help='Path to data.')
     parser.add_argument('--checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt', help='Path to checkpoint.')
     parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
@@ -84,13 +84,14 @@ if __name__ == '__main__':
     parser.add_argument('--disc-factor', type=float, default=1., help='Weighting factor for the Discriminator.')
     parser.add_argument('--l2-loss-factor', type=float, default=1., help='Weighting factor for reconstruction loss.')
     parser.add_argument('--perceptual-loss-factor', type=float, default=1., help='Weighting factor for perceptual loss.')
+    parser.add_argument('--time-since', type=float, default=0.02, help='Sampling time since last frame got sampled.')
 
     parser.add_argument('--pkeep', type=float, default=0.5, help='Percentage for how much latent codes to keep.')
     parser.add_argument('--sos-token', type=int, default=0, help='Start of Sentence token.')
 
     args = parser.parse_args()
     args.dataset = "Indoor4"
-    args.checkpoint_path = r"./checkpoints/vqgan_epoch_7.pt"
+    args.checkpoint_path = r"./checkpoints/vqgan_epoch_9.pt"
 
     if torch.cuda.is_available():
         args.device = torch.device("cuda")
