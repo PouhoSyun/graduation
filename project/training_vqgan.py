@@ -52,14 +52,17 @@ class TrainVQGAN:
         steps_per_epoch = len(train_dataset)
         for epoch in range(args.epochs):
             with tqdm(range(len(train_dataset))) as pbar:
-                for i, imgs in zip(pbar, train_dataset):
+                self.opt_vq.zero_grad()
+                self.opt_disc.zero_grad()
+
+                for accu_step, imgs in zip(pbar, train_dataset):
                     imgs = imgs.to(device=args.device)
                     decoded_images, _, q_loss = self.vqgan(imgs)
 
                     disc_real = self.discriminator(imgs)
                     disc_fake = self.discriminator(decoded_images)
 
-                    disc_factor = self.vqgan.adopt_weight(args.disc_factor, i=epoch*steps_per_epoch+i, threshold=args.disc_start)
+                    disc_factor = self.vqgan.adopt_weight(args.disc_factor, i=epoch*steps_per_epoch+accu_step, threshold=args.disc_start)
 
                     perceptual_loss = self.perceptual_loss(imgs, decoded_images)
                     rec_loss = torch.abs(imgs - decoded_images)
@@ -74,19 +77,22 @@ class TrainVQGAN:
                     d_loss_fake = torch.mean(F.relu(1. + disc_fake))
                     gan_loss = disc_factor * 0.5*(d_loss_real + d_loss_fake)
 
-                    self.opt_vq.zero_grad()
+                    vq_loss = vq_loss / args.accu_times
                     vq_loss.backward(retain_graph=True)
 
-                    self.opt_disc.zero_grad()
+                    gan_loss = gan_loss / args.accu_times
                     gan_loss.backward()
 
-                    self.opt_vq.step()
-                    self.opt_disc.step()
+                    if accu_step % args.accu_times == 0:
+                        self.opt_vq.step()
+                        self.opt_disc.step()
+                        self.opt_vq.zero_grad()
+                        self.opt_disc.zero_grad()
 
-                    if i % 10 == 0:
+                    if accu_step % 10 == 0:
                         with torch.no_grad():
                             real_fake_images = torch.cat((imgs[:4].add(1).mul(0.5), decoded_images.add(1).mul(0.5)[:4]))
-                            vutils.save_image(real_fake_images, os.path.join("results", f"{epoch}_{i}.jpg"), nrow=4)
+                            vutils.save_image(real_fake_images, os.path.join("results", f"{epoch}_{accu_step}.jpg"), nrow=4)
 
                     pbar.set_postfix(
                         VQ_Loss=np.round(vq_loss.cpu().detach().numpy().item(), 5),
@@ -114,7 +120,7 @@ if __name__ == '__main__':
     parser.add_argument('--disc-factor', type=float, default=1., help='')
     parser.add_argument('--rec-loss-factor', type=float, default=1., help='Weighting factor for reconstruction loss.')
     parser.add_argument('--perceptual-loss-factor', type=float, default=1., help='Weighting factor for perceptual loss.')
-
+    parser.add_argument('--accu-times', type=int, default=8, help='Times of gradient accumulation.')
     args = parser.parse_args()
     args.dataset = "Indoor4"
     
