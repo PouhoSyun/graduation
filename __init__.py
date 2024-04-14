@@ -1,0 +1,1 @@
+from .segment_anything import __init__

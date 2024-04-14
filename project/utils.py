@@ -7,6 +7,9 @@ import torch.nn as nn
 import torch.utils.data as data
 import matplotlib.pyplot as plt
 import albumentations as alb
+from unpack import unpack
+
+TIME_PERIOD = 0.2
 
 # 4 basic methods for numpy.array -- fundamental stack/split & fine stack/split functions
 # hvstack -- array[n*n, c, size, size] -> array[c, n*size, n*size]
@@ -68,80 +71,105 @@ def fine_split(src: np.ndarray, pieces = 4):
     dst = np.array(dst).transpose(1, 0, 2, 3)
     return dst
 
+# make src image to square shape with size=to_size by central-padding
+def squarify(src: np.ndarray, to_size):
+    dst = []
+    for c in src:
+        shape = c.shape
+        up = (to_size - shape[0]) // 2
+        down = to_size - shape[0] - up
+        left = (to_size - shape[1]) // 2
+        right = to_size - shape[1] - left
+        dst.append(cv2.copyMakeBorder(c, up, down, left, right, cv2.BORDER_CONSTANT, value=(128)).tolist())
+    return np.array(dst)
+    
 # size of event camera is 190*180
 # transform matfile to stream array, then use spatial-temporal voxel grid method to record events.
 # the output is the event voxel grid map resized to size_scale(default:8) times
-def pack_event_stream(dataset, time, split=True, size_scale=8, redump=False):
+def pack_event_stream(dataset, dataset_format, split=True, 
+                      size=(200, 200), dsize=(200, 200), redump=False):
     try:
         if redump:
             raise Exception('Force to Redump')
-        event_countmap = np.load("dataset_prep/" + dataset + "/events_voxel.npy")
+        event_countmap = np.load("project/dataset_prep/" + dataset + "/events_voxel.npy")
         print("Reading events_voxel dumpfile")
     except:
-        file_cnt = len(os.listdir("project/dataset/" + dataset + "/events_clip"))
-        ev_stream = []
-        for i in range(1, file_cnt + 1):
-            data = mat73.loadmat("project/dataset/" + dataset + "/events_clip/frame" + str(i) + ".mat")
-            events = np.array(tuple(zip(data['clipev']['ev_x'],
-                                data['clipev']['ev_y'],
-                                data['clipev']['ev_p'],
-                                data['clipev']['ev_t'])))
-            ev_stream.append(events)
+        if(dataset_format == 'raw'):
+            file_cnt = len(os.listdir("D:/Working/code/dataset/" + dataset + "/events_clip"))
+            ev_stream = []
+            for i in range(1, file_cnt + 1):
+                data = list(mat73.loadmat("D:/Working/code/dataset/" + dataset + "/events_clip/frame" + str(i) + ".mat").values())
+                events = np.array(tuple(zip(data[0]['ev_x'],
+                                    data[0]['ev_y'],
+                                    data[0]['ev_p'],
+                                    data[0]['ev_t'])))
+                ev_stream.append(events)
+        elif(dataset_format == 'aedat'):
+            ev_stream, _ = unpack(dataset)
 
         event_countmap = []
         for events in ev_stream:
             # DAVIS infrared senser use linear threshold
-            event_field = np.zeros((200, 200))
+            event_field = np.zeros(size)
             for event in events:
                 #consider pre/past event affect
-                event_field[int(event[1])][int(event[0])] += event[2] / (1 + math.exp(time - event[3])) 
+                event_field[int(event[1])][int(event[0])] += event[2] / (1 + math.exp(1 - event[3] / TIME_PERIOD))
             event_field = np.clip(event_field, -255, 255)
+            event_field = np.flip(np.flip(event_field, axis=0), axis=1)
             for it in np.nditer(event_field, op_flags=["readwrite"]):
                 it[...] = np.uint8(255 / (1 + math.exp(-it)))
 
-            # split the output into 16 50*50 pieces
-            shape = np.array(event_field).shape
-            shape = [i*size_scale for i in shape]
-            event_field = cv2.resize(np.array(event_field), shape, interpolation=cv2.INTER_LINEAR)
+            # split the output into 16 50*50 pieces, if necessary
+            # event_field = cv2.resize(event_field, dsize=dsize, interpolation=cv2.INTER_LINEAR)
             event_field = np.array([event_field])
+            event_field = squarify(event_field, 400)
+            
             if not split:
                 event_countmap.append(event_field)
             else:
                 event_countmap.append(hvsplit(event_field))
         
         event_countmap = np.array(event_countmap)
-        if not os.path.exists("dataset_prep/" + dataset):
-            os.makedirs("dataset_prep/" + dataset)
+        if not os.path.exists("project/dataset_prep/" + dataset):
+            os.makedirs("project/dataset_prep/" + dataset)
         print("Saving events_voxel to dumpfile")
-        np.save("dataset_prep/" + dataset + "/events_voxel.npy", event_countmap)
+        np.save("project/dataset_prep/" + dataset + "/events_voxel.npy", event_countmap)
 
     return event_countmap
 
 # size of frame camera is 1520 * 1440, then split to 16 1-channel 400*400 cell-pics.
 def load_frame_png(dataset, file_id, cmap, split=True):
-    frame = cv2.imread("project/dataset/" + dataset + "/RGB_frame/frame" + str(file_id+1) + ".png", cmap)
-    h_pad = (1600 - frame.shape[1]) // 2
-    v_pad = (1600 - frame.shape[0]) // 2 
-    frame = np.array([cv2.copyMakeBorder(frame, v_pad, v_pad, h_pad, h_pad, cv2.BORDER_CONSTANT, value=(128, 128, 128))])
+    frame = cv2.imread("D:/Working/code/dataset/" + dataset + "/RGB_frame/frame" + str(file_id+1) + ".png", cmap)
+    frame = squarify(frame, 1600)
     if not split: return frame
-    else: return fine_split(frame).astype(np.uint8)
+    else: return hvsplit(frame).astype(np.uint8)
 
-def pack_frame_png(dataset, cmap):
-    file_cnt = len(os.listdir("project/dataset/" + dataset + "/RGB_frame"))
-    frames = []
-    for iter in range(file_cnt):
-        frame = load_frame_png(dataset, iter, cmap)
-        frames.append(frame)
+# dataset_format={'raw' for pngs and matlike events, 'aedat' for davis24 datasets}
+def pack_frame_png(dataset, dataset_format, cmap, split=True, size=400):
+    if(dataset_format == 'raw'):
+        file_cnt = len(os.listdir("D:/Working/code/dataset/" + dataset + "/RGB_frame"))
+        frames = []
+        for iter in range(file_cnt):
+            frame = load_frame_png(dataset, iter, cmap, split)
+            frames.append(frame)
+    elif(dataset_format == 'aedat'):
+        _, frames_raw = unpack(dataset)
+        frames = []
+        for frame in frames_raw:
+            frame = np.flip(frame, axis=1)
+            frame = squarify(frame, size).tolist()
+            if split:
+                frame = hvsplit(frame)
+            frames.append(frame)
     print("Frame PNGs have been packed to dump_ndarray")
     return np.array(frames)
 
 # get frame dataset: cmap--cv2.IMREAD_*, size--square edge length of the image
 class Frame_Dataset(data.Dataset):
-    def __init__(self, dataset, cmap, size):
-        self.images = pack_frame_png(dataset, cmap)
+    def __init__(self, dataset, dataset_format, cmap, size, split):
+        self.images = pack_frame_png(dataset, dataset_format, cmap, split, size)
         self._length = len(self.images)
-        self.cmap = cmap
-        self.dataset = dataset
+        self.split = split
         
         self.rescaler = alb.SmallestMaxSize(max_size=size)
         self.cropper = alb.CenterCrop(height=size, width=size)
@@ -152,16 +180,21 @@ class Frame_Dataset(data.Dataset):
         return self._length * 16
     
     def __getitem__(self, index):
-        item = self.images[index//16]
-        item = self.preprocessor(image=item[index%16].transpose(1, 2, 0))["image"]
+        if not self.split:
+            item = self.images[index]
+            item = self.preprocessor(image=item.transpose(1, 2, 0))["image"]
+        else:
+            item = self.images[index//16]
+            item = self.preprocessor(image=item[index%16].transpose(1, 2, 0))["image"]
         item = (item / 127.5 - 1.0).astype(np.float32)
         return torch.Tensor(item.transpose(2, 0, 1))
 
 class Event_Dataset(data.Dataset):
-    def __init__(self, dataset, time, size):
-        self.events = pack_event_stream(dataset, time, split=True, size_scale=8, redump=False)
+    def __init__(self, dataset, dataset_format, size, split):
+        self.events = pack_event_stream(dataset, dataset_format, split,
+                                        size=(260, 346), dsize=(260, 346), redump=True)
         self._length = len(self.events)
-        self.dataset = dataset
+        self.split = split
 
         self.rescaler = alb.SmallestMaxSize(max_size=size)
         self.cropper = alb.CenterCrop(height=size, width=size)
@@ -172,16 +205,20 @@ class Event_Dataset(data.Dataset):
         return self._length * 16
     
     def __getitem__(self, index):
-        item = self.events[index//16]
-        item = self.preprocessor(image=item[index%16].transpose(1, 2, 0))["image"]
+        if not self.split:
+            item = self.events[index]
+            item = self.preprocessor(image=item.transpose(1, 2, 0))["image"]
+        else:
+            item = self.events[index//16]
+            item = self.preprocessor(image=item[index%16].transpose(1, 2, 0))["image"]
         item = (item / 127.5 - 1.0).astype(np.float32)
         return torch.Tensor(item.transpose(2, 0, 1))
 
 #dataset class for transformer, return items of 2-channels, with the shape of size*size
 class DAVIS_Dataset(data.Dataset):
-    def __init__(self, dataset, cmap, size, time):
-        self.eventset = Event_Dataset(dataset, time, size)
-        self.frameset = Frame_Dataset(dataset, cmap, size)
+    def __init__(self, dataset, dataset_format, cmap, size, split):
+        self.eventset = Event_Dataset(dataset, dataset_format, size, split)
+        self.frameset = Frame_Dataset(dataset, dataset_format, cmap, size, split)
         self._length = len(self.frameset)
         pass
 
@@ -192,24 +229,23 @@ class DAVIS_Dataset(data.Dataset):
         item = np.array([self.frameset[index][0]+self.eventset[index][0]])
         return torch.Tensor(item)
     
-    # def __show__(self, index):
-    #     frame, events, target = self.__getitem__(index)
-    #     cv2.namedWindow("Dataset Preview", cv2.WINDOW_FREERATIO)
-    #     stack_frame = hvstack(frame)
-    #     stack_events = cv2.copyMakeBorder(hvstack(events), 700, 700, 0, 0, cv2.BORDER_CONSTANT, value=(128, 128, 128))
-    #     stack_target = hvstack(target)
-    #     show_view = np.hstack([stack_frame, stack_events, stack_target])
-    #     cv2.imshow("Dataset Preview", show_view)
-    #     cv2.waitKey(1)
+    def __show__(self, index):
+        frame1 = np.array(self.frameset[index][0].add(1).mul(127.5))
+        event1 = np.array(self.eventset[index][0].add(1).mul(127.5))
+        frame2 = np.array(self.frameset[index+1][0].add(1).mul(127.5))
+        event2 = np.array(self.eventset[index+1][0].add(1).mul(127.5))
+        cv2.namedWindow("Dataset Preview", cv2.WINDOW_AUTOSIZE)
+        show_view = np.hstack([frame1, event1, frame2, event2])
+        cv2.imshow("Dataset Preview", show_view.astype(np.uint8))
+        cv2.waitKey(1)
 
-# data_type 0-src_frame, 1-event_voxel, 2-dst_frame
 def load_frameset(args):
-    dataset = Frame_Dataset(args.dataset, cv2.IMREAD_GRAYSCALE, args.image_size)
+    dataset = Frame_Dataset(args.dataset, args.dataset_format, cv2.IMREAD_GRAYSCALE, args.image_size, args.split)
     train_loader = data.DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
     return train_loader
 
 def load_davisset(args):
-    dataset = DAVIS_Dataset(args.dataset, cv2.IMREAD_GRAYSCALE, args.image_size, args.time_since)
+    dataset = DAVIS_Dataset(args.dataset, args.dataset_format, cv2.IMREAD_GRAYSCALE, args.image_size, args.split)
     train_loader = data.DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
     return train_loader
 
@@ -236,6 +272,6 @@ def plot_images(images):
 
 # preview DAVIS dataset
 if __name__ == '__main__':
-    dataset = DAVIS_Dataset("Indoor4", 0.02, cv2.IMREAD_GRAYSCALE)
+    dataset = DAVIS_Dataset("1", 'aedat', cv2.IMREAD_GRAYSCALE, 400, False)
     while(True):
         dataset.__show__(int(input("Index to preview: ")))

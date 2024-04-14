@@ -106,6 +106,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="VQGAN")
     parser.add_argument('--latent-dim', type=int, default=256, help='Latent dimension n_z (default: 256)')
     parser.add_argument('--image-size', type=int, default=400, help='Image height and width (default: 256)')
+    parser.add_argument('--split', type=bool, default=True)
     parser.add_argument('--codebook-size', type=int, default=1024, help='Number of codebook vectors (default: 1024)')
     parser.add_argument('--beta', type=float, default=0.25, help='Commitment loss scalar (default: 0.25)')
     parser.add_argument('--image-channels', type=int, default=1, help='Number of channels of images (default: 1)')
@@ -122,7 +123,8 @@ if __name__ == '__main__':
     parser.add_argument('--perceptual-loss-factor', type=float, default=1., help='Weighting factor for perceptual loss.')
     parser.add_argument('--accu-times', type=int, default=8, help='Times of gradient accumulation.')
     args = parser.parse_args()
-    args.dataset = "Indoor4"
+    args.dataset = "1"
+    args.split = False
     
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:200"

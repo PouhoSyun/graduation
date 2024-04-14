@@ -18,6 +18,9 @@
 
 /.tmp.driveupload
 
-/dataset_prep
+/project/dataset_prep
 
 /graduation.zip
+
+/ddd20-utils
+

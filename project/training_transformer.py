@@ -69,10 +69,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="VQGAN")
     parser.add_argument('--latent-dim', type=int, default=256, help='Latent dimension n_z.')
     parser.add_argument('--image-size', type=int, default=400, help='Image height and width.)')
+    parser.add_argument('--split', type=bool, default=True)
     parser.add_argument('--codebook-size', type=int, default=1024, help='Number of codebook vectors.')
     parser.add_argument('--beta', type=float, default=0.25, help='Commitment loss scalar.')
     parser.add_argument('--image-channels', type=int, default=1, help='Number of channels of images.')
-    parser.add_argument('--dataset-path', type=str, default='./data', help='Path to data.')
+    parser.add_argument('--dataset', type=str, default='Indoor4', help='Path to data.')
+    parser.add_argument('--dataset-format', type=str, default='raw', help='Format of dataset.')
     parser.add_argument('--checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt', help='Path to checkpoint.')
     parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
     parser.add_argument('--batch-size', type=int, default=10, help='Input batch size for training.')
@@ -91,6 +93,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     args.dataset = "Indoor4"
+    args.dataset_format = 'raw'
+    args.split = False
     args.checkpoint_path = r"./checkpoints/vqgan_epoch_9.pt"
 
     if torch.cuda.is_available():
