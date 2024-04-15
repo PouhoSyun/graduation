@@ -1,26 +1,11 @@
-/.vscode
-
-/.cometml-runs
-
 /results
-
 /checkpoints
-
+/dataset
+/dataset_davis
 /vgg_lpips
 
-/project/dataset
-
 /project/__pycache__
-
 /project/model/__pycache__
-
 /project/transformer/__pycache__
 
-/.tmp.driveupload
-
-/project/dataset_prep
-
-/graduation.zip
-
-/ddd20-utils
-
+/segment_anything/pth

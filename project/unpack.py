@@ -2,7 +2,7 @@ import scipy
 import numpy as np
 
 def unpack(dataset_mat):
-    path = "D:\\Working\\code\\dataset_davis\\"
+    path = "dataset_davis/"
     data = scipy.io.loadmat(path + dataset_mat + ".mat")
     data = data['aedat']['data'][0][0][0][0]
     x = data[0][0]['x'][0]

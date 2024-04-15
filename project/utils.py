@@ -91,14 +91,14 @@ def pack_event_stream(dataset, dataset_format, split=True,
     try:
         if redump:
             raise Exception('Force to Redump')
-        event_countmap = np.load("project/dataset_prep/" + dataset + "/events_voxel.npy")
+        event_countmap = np.load("dataset/dataset_prep/" + dataset + "/events_voxel.npy")
         print("Reading events_voxel dumpfile")
     except:
         if(dataset_format == 'raw'):
-            file_cnt = len(os.listdir("D:/Working/code/dataset/" + dataset + "/events_clip"))
+            file_cnt = len(os.listdir("dataset/" + dataset + "/events_clip"))
             ev_stream = []
             for i in range(1, file_cnt + 1):
-                data = list(mat73.loadmat("D:/Working/code/dataset/" + dataset + "/events_clip/frame" + str(i) + ".mat").values())
+                data = list(mat73.loadmat("dataset/" + dataset + "/events_clip/frame" + str(i) + ".mat").values())
                 events = np.array(tuple(zip(data[0]['ev_x'],
                                     data[0]['ev_y'],
                                     data[0]['ev_p'],
@@ -130,16 +130,16 @@ def pack_event_stream(dataset, dataset_format, split=True,
                 event_countmap.append(hvsplit(event_field))
         
         event_countmap = np.array(event_countmap)
-        if not os.path.exists("project/dataset_prep/" + dataset):
-            os.makedirs("project/dataset_prep/" + dataset)
+        if not os.path.exists("dataset/dataset_prep/" + dataset):
+            os.makedirs("dataset/dataset_prep/" + dataset)
         print("Saving events_voxel to dumpfile")
-        np.save("project/dataset_prep/" + dataset + "/events_voxel.npy", event_countmap)
+        np.save("dataset/dataset_prep/" + dataset + "/events_voxel.npy", event_countmap)
 
     return event_countmap
 
 # size of frame camera is 1520 * 1440, then split to 16 1-channel 400*400 cell-pics.
 def load_frame_png(dataset, file_id, cmap, split=True):
-    frame = cv2.imread("D:/Working/code/dataset/" + dataset + "/RGB_frame/frame" + str(file_id+1) + ".png", cmap)
+    frame = cv2.imread("dataset/" + dataset + "/RGB_frame/frame" + str(file_id+1) + ".png", cmap)
     frame = squarify(frame, 1600)
     if not split: return frame
     else: return hvsplit(frame).astype(np.uint8)
@@ -147,7 +147,7 @@ def load_frame_png(dataset, file_id, cmap, split=True):
 # dataset_format={'raw' for pngs and matlike events, 'aedat' for davis24 datasets}
 def pack_frame_png(dataset, dataset_format, cmap, split=True, size=400):
     if(dataset_format == 'raw'):
-        file_cnt = len(os.listdir("D:/Working/code/dataset/" + dataset + "/RGB_frame"))
+        file_cnt = len(os.listdir("dataset/" + dataset + "/RGB_frame"))
         frames = []
         for iter in range(file_cnt):
             frame = load_frame_png(dataset, iter, cmap, split)
